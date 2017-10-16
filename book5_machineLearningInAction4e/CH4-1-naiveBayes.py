@@ -38,10 +38,10 @@ def trainNB0(trainMatrix,trainCategory):
     #第0条里的单词数，其实每条都一样，因为setOfWords2Vec里指定了长度是按照词汇表来的
     numWords = len(trainMatrix[0])
     pAbusive = sum(trainCategory)/float(numTrainDocs) #出现脏留言的概率
-    p0Num = zeros(numWords)
-    p1Num = zeros(numWords)
-    p0Denom = 0.0
-    p1Denom = 0.0 #分母英文denominator
+    p0Num = ones(numWords)
+    p1Num = ones(numWords)
+    p0Denom = 2.0
+    p1Denom = 2.0 #分母英文denominator
     for i in range(numTrainDocs):
         if trainCategory[i] == 1:
             p1Num += trainMatrix[i] #全脏留言中，每个单词的出现次数（列表形式）
@@ -51,8 +51,8 @@ def trainNB0(trainMatrix,trainCategory):
         else:
             p0Num += trainMatrix[i] #全正常留言中，每个单词的出现次数（列表形式）
             p0Denom += sum(trainMatrix[i]) #所有正常留言中，单词个数合计
-    p1Vect = p1Num/p1Denom #change to log()
-    p0Vect = p0Num/p0Denom #change to log()
+    p1Vect = log(p1Num/p1Denom)
+    p0Vect = log(p0Num/p0Denom)
     #上两式算的是脏留言和正常留言中，每个词出现的频率（列表形式）
     return p0Vect,p1Vect,pAbusive
 
@@ -66,3 +66,33 @@ for i in range(len(myVocabList)):
     print(str(('%.3f' % p0V[i]))+"\t"+str(('%.3f' % p1V[i]))+"\t",end="")
     print(str(myVocabList[i]))
     #观察下，stupid出现概率最高，意为着它是最能表征“脏留言”类别的单词
+    
+def classifyNB(vec2Classify, p0Vec, p1Vec, pClass1):
+    p1 = sum(vec2Classify * p1Vec) + log(pClass1)#这两行理解不了——————————————
+    p0 = sum(vec2Classify * p0Vec) + log(1.0 - pClass1)#这两行理解不了————————
+    if p1 > p0:
+        return 1
+    else:
+        return 0
+
+def testingNB(listOPosts,listClasses):
+    myVocabList = createVocabList(listOPosts) #词汇表
+    trainMat=[] #训练样本
+    for postinDoc in listOPosts:
+        trainMat.append(setOfWords2Vec(myVocabList, postinDoc))
+    p0V,p1V,pAb = trainNB0(array(trainMat),array(listClasses))
+    testEntry = ['love', 'my', 'dalmation']
+    thisDoc = array(setOfWords2Vec(myVocabList, testEntry))#列表转数组
+    print(testEntry,'classified as: ',classifyNB(thisDoc,p0V,p1V,pAb))
+    testEntry = ['stupid', 'garbage']
+    thisDoc = array(setOfWords2Vec(myVocabList, testEntry))
+    print(testEntry,'classified as: ',classifyNB(thisDoc,p0V,p1V,pAb))
+
+testingNB(listOPosts,listClasses)
+
+def bagOfWords2VecMN(vocabList, inputSet):
+    returnVec = [0]*len(vocabList)
+    for word in inputSet:
+        if word in vocabList:
+            returnVec[vocabList.index(word)] += 1 #把词集模型的=1改成词袋模型的+=1
+    return returnVec
