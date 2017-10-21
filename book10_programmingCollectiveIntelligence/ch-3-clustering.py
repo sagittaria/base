@@ -9,61 +9,60 @@ from PIL import Image,ImageDraw
 
 def readfile(filename):
     lines=[line for line in open(filename)]
-    # First line is the column titles
     colnames=lines[0].strip().split('\t')[1:]
     rownames=[]
     data=[]
     for line in lines[1:]:
         p=line.strip().split('\t')
-        # First column in each row is the rowname
         rownames.append(p[0])
-        # The data for this row is the remainder of the row
         data.append([float(x) for x in p[1:]])
     return rownames,colnames,data
 
-blognames,words,data=readfile("blogdata.txt")
+blognames,words,data=readfile("blogdata.txt") #以上预处理：读入数据
 
-'''
-贴-皮尔逊相关度的公式
-'''
 
 def pearson(v1,v2):    
-    sum1=sum(v1)# Simple sums
-    sum2=sum(v2)
-    
-    sum1Sq=sum([pow(v,2) for v in v1])# Sums of the squares
+    sum1=sum(v1)
+    sum2=sum(v2)    
+    sum1Sq=sum([pow(v,2) for v in v1])
     sum2Sq=sum([pow(v,2) for v in v2])
-    
-    pSum=sum([v1[i]*v2[i] for i in range(len(v1))])# Sum of the products
-   
-    num=pSum-(sum1*sum2/len(v1)) # Calculate r (Pearson score)
+    pSum=sum([v1[i]*v2[i] for i in range(len(v1))])
+    num=pSum-(sum1*sum2/len(v1))
     den=sqrt((sum1Sq-pow(sum1,2)/len(v1))*(sum2Sq-pow(sum2,2)/len(v1)))
     if den==0: return 0
     return 1.0-num/den
-
+    '''#因为num/den算出来的皮尔逊相关度，两组数据完全匹配时值为1，
+    完全无关时值为0，所以用1减去相关度，则结果表现为越相似的东西，“距离”越近'''
 
 class bicluster: #树的分枝节点或者叶节点（原数据集中的每一行对应叶节点）
     def __init__(self,vec,left=None,right=None,distance=0.0,id=None):
         self.left=left
         self.right=right
-        self.vec=vec
+        self.vec=vec #单词向量，就是从文件中读到的行
         self.id=id
         self.distance=distance
 
 
 def hcluster(rows,distance=pearson):
     distances={}
+    '''这个字典键是两个索引值组成的元组，值是距离，
+    如(0,1):0.3表示clust[0]和clust[1]之间的距离是0.3'''
     currentclustid=-1
-    # Clusters are initially just the rows
+    '''新合并出来的clust的id都用负数，第一个新聚类是-1，第二个是-2，以此类推'''
     clust=[bicluster(rows[i],id=i) for i in range(len(rows))]
+    '''最初始时，每行数据(每个blog)自成一个clust'''
     while len(clust)>1:
-        lowestpair=(0,1)
+        lowestpair=(0,1)#初始化一个距离最近的pair，即认为第0个和第1个博客最近
         closest=distance(clust[0].vec,clust[1].vec)
-        # loop through every pair looking for the smallest distance
-        for i in range(len(clust)):
-            for j in range(i+1,len(clust)):
-                # distances is the cache of distance calculations
+        
+        for i in range(len(clust)):#遍历每个clust
+            for j in range(i+1,len(clust)):#，和其他所有clust
+                '''如果distances字典中还没存这对clust之间的距离
+                也即字典中还没(i,j)这个键时：'''
                 if (clust[i].id,clust[j].id) not in distances:
+                    '''写成.id而不直接用i,j是由于以后会有新的clust，其id不在用下句
+                    clust=[bicluster(rows[i],id=i) for i in range(len(rows))]
+                    初始化时的id中'''
                     distances[(clust[i].id,clust[j].id)]=distance(clust[i].vec,clust[j].vec)
                     
                 d=distances[(clust[i].id,clust[j].id)]
@@ -71,19 +70,21 @@ def hcluster(rows,distance=pearson):
                 if d<closest:
                     closest=d
                     lowestpair=(i,j)
+                '''因为后面会把新的聚类append上来，所以i,j始终是clust列表的合法索引'''
 
-        # calculate the average of the two clusters
-        mergevec=[(clust[lowestpair[0]].vec[i]+clust[lowestpair[1]].vec[i])/2.0 for i in range(len(clust[0].vec))]
+        #求平均作为新聚类的单词向量
+        mergevec=[(clust[lowestpair[0]].vec[i]+clust[lowestpair[1]].vec[i])/2.0
+                    for i in range(len(clust[0].vec))]
     
-        # create the new cluster
+        #用距离最近的那两个节点，创建新的聚类
         newcluster=bicluster(mergevec,left=clust[lowestpair[0]],right=clust[lowestpair[1]],distance=closest,id=currentclustid)
     
         # cluster ids that weren't in the original set are negative
-        currentclustid-=1
+        currentclustid-=1 #新合成的聚类的id用负数，依次递减，-2，-3，...
         del clust[lowestpair[1]]
-        del clust[lowestpair[0]]
-        clust.append(newcluster)
-    return clust[0]
+        del clust[lowestpair[0]]#删掉原来最近的两个
+        clust.append(newcluster)#把新合成的聚类append上去
+    return clust[0] #最终返回了树的根节点
 
 clust=hcluster(data)
 
