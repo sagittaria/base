@@ -89,56 +89,53 @@ def hcluster(rows,distance=pearson):
 clust=hcluster(data)
 
 def getheight(clust):
-    # Is this an endpoint? Then the height is just 1
+    #如果是叶节点，高度为1；否则，高度是所有分支的高度之和
     if clust.left==None and clust.right==None: return 1
-    # Otherwise the height is the same of the heights of each branch
     return getheight(clust.left)+getheight(clust.right)
-
-
+'''树的根节点在左，叶节点在右。height指竖直高度，depth是水平宽度'''
 def getdepth(clust):
-    # The distance of an endpoint is 0.0
+    #如果是叶节点，深度为0；
     if clust.left==None and clust.right==None: return 0
-    # The distance of a branch is the greater of its two sides
-    # plus its own distance
+    #否则返回（其他分支中，深度最大的分支的深度值，加上本节点自身的深度）
     return max(getdepth(clust.left),getdepth(clust.right))+clust.distance
 
 
 def drawdendrogram(clust,labels,jpeg='clusters.jpg'):
-    # height and width
     h=getheight(clust)*20
-    w=1200
+    w=1200 #图幅：宽1200，高为竖直方向上的层数乘以20
     depth=getdepth(clust)
-    # width is fixed, so scale distances accordingly
     scaling=float(w-150)/depth
-    # Create a new image with a white background
-    img=Image.new('RGB',(w,h),(255,255,255))
+    '''（尚不太明晰）因为图幅宽度已经定死，需对短横按比例缩放。上式在做什么：
+    留出150用于放文字，剩下的宽度，如果要放depth层，计算每层短横的平均长度'''
+    
+    img=Image.new('RGB',(w,h),(255,255,255))#固定用法吧
     draw=ImageDraw.Draw(img)
-    draw.line((0,h/2,10,h/2),fill=(255,0,0))
-    # Draw the first node
-    drawnode(draw,clust,10,(h/2),scaling,labels)
+    draw.line((0,h/2,10,h/2),fill=(255,0,0))#画从根节点出来的短横
+    
+    drawnode(draw,clust,10,(h/2),scaling,labels)#调递归函数
     img.save(jpeg,'JPEG')
 
 
 def drawnode(draw,clust,x,y,scaling,labels):
-    if clust.id<0:
+    if clust.id<0:#如果不是叶节点
         h1=getheight(clust.left)*20
-        h2=getheight(clust.right)*20
+        h2=getheight(clust.right)*20 #左子树和右子树的高度
         top=y-(h1+h2)/2
-        bottom=y+(h1+h2)/2
-        # Line length
-        ll=clust.distance*scaling
-        # Vertical line from this cluster to children
+        bottom=y+(h1+h2)/2#左子树和右子树的短横起点的纵坐标
+        #短横长度：由“这个”非叶节点存的distance乘缩放因子所得
+        ll=clust.distance*scaling 
+        # 竖线
         draw.line((x,top+h1/2,x,bottom-h2/2),fill=(255,0,0))
-        # Horizontal line to left item
+        # 左子树的短横
         draw.line((x,top+h1/2,x+ll,top+h1/2),fill=(255,0,0))
-        # Horizontal line to right item
+        # 右子树的短横
         draw.line((x,bottom-h2/2,x+ll,bottom-h2/2),fill=(255,0,0))
-        # Call the function to draw the left and right nodes
+        # 递归画左子树，和，右子树
         drawnode(draw,clust.left,x+ll,top+h1/2,scaling,labels)
         drawnode(draw,clust.right,x+ll,bottom-h2/2,scaling,labels)
     else:
-        # If this is an endpoint, draw the item label
-        draw.text((x+5,y-7),labels[clust.id],(0,0,0))
+        #如果是叶节点，在给定坐标的右5、上6处放博客名
+        draw.text((x+5,y-6),labels[clust.id],(0,0,0))
 
 
 drawdendrogram(clust,blognames,jpeg='blogclust.jpg')
