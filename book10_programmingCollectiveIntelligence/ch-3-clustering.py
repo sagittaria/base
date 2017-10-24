@@ -19,7 +19,7 @@ def readfile(filename):
         data.append([float(x) for x in p[1:]])
     return rownames,colnames,data
 
-blognames,words,data=readfile("blogdata.txt") #以上预处理：读入数据
+#blognames,words,data=readfile("blogdata.txt") #以上预处理：读入数据
 
 
 def pearson(v1,v2):    
@@ -199,5 +199,19 @@ def kcluster(rows,distance=pearson,k=4):
                 
     return bestmatches
 
-clust=kcluster(data)
+#clust=kcluster(data)
 '''“初始化”过程中有随机因素，所以结果不很稳定'''
+
+'''针对偏好的聚类'''
+def tanimoto(v1,v2):#数据只有0,1，用Tanimoto coefficient(谷本系数)比皮尔逊系数更合适
+    c1,c2,shr=0,0,0
+    for i in range(len(v1)):
+        if v1[i]!=0: c1+=1 # in v1
+        if v2[i]!=0: c2+=1 # in v2
+        if v1[i]!=0 and v2[i]!=0: shr+=1 # in both
+    return 1.0-(float(shr)/(c1+c2-shr))
+    
+#所得结果图与书上不同的
+wants,people,data=readfile('zebo.txt')
+clust=hcluster(data,distance=tanimoto)
+drawdendrogram(clust,wants)
