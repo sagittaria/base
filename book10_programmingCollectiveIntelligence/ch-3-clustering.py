@@ -203,15 +203,78 @@ def kcluster(rows,distance=pearson,k=4):
 '''“初始化”过程中有随机因素，所以结果不很稳定'''
 
 '''针对偏好的聚类'''
-def tanimoto(v1,v2):#数据只有0,1，用Tanimoto coefficient(谷本系数)比皮尔逊系数更合适
+def tanimoto(v1,v2):#数据只有0,1，用Tanimoto coefficient(谷本系数)比欧氏距离和皮尔逊系数更合适
     c1,c2,shr=0,0,0
     for i in range(len(v1)):
         if v1[i]!=0: c1+=1 # in v1
         if v2[i]!=0: c2+=1 # in v2
         if v1[i]!=0 and v2[i]!=0: shr+=1 # in both
-    return 1.0-(float(shr)/(c1+c2-shr))
+    return 1.0-(float(shr)/(c1+c2-shr)) #就是交集除以并集
     
 #所得结果图与书上不同的
-wants,people,data=readfile('zebo.txt')
-clust=hcluster(data,distance=tanimoto)
-drawdendrogram(clust,wants)
+#wants,people,data=readfile('zebo.txt')
+#clust=hcluster(data,distance=tanimoto)
+#drawdendrogram(clust,wants)
+
+
+'''多维缩放：用于以二维形式展示多维数据，每个数据项之间的距离对应于它们彼此间的差异程度'''
+def scaledown(data,distance=pearson,rate=0.01):
+    n=len(data)
+    # 真实距离（用distance方法计算得出）
+    realdist=[[distance(data[i],data[j]) for j in range(n)]
+                                        for i in range(0,n)]
+
+    # 随机初始化“点”的位置
+    loc=[[random.random(),random.random()] for i in range(n)]
+    
+    # 初始化一个n行n列的“零矩阵”,将用于放两两之间的欧氏距离（随机撒点的结果）
+    fakedist=[[0.0 for j in range(n)] for i in range(n)]
+    
+    lasterror=None
+    
+    for m in range(0,1000):#最大迭代1000步
+        for i in range(n):
+            for j in range(n):
+                #计算欧氏距离
+                fakedist[i][j]=sqrt(sum([pow(loc[i][x]-loc[j][x],2)
+                                        for x in range(len(loc[i]))]))
+        '''移点的准备工作:
+        先初始化n行2列的“零矩阵”，将存x和y向的梯度（通俗说是数据点移动的步幅）'''
+        grad=[[0.0,0.0] for i in range(n)]
+        totalerror=0
+        
+        for k in range(n):
+            for j in range(n):
+                if j==k: continue #自己和自己的距离本就该是零
+                # 误差以比率表示：当前欧氏距离与真实距离之差，比上真实距离
+                errorterm=(fakedist[j][k]-realdist[j][k])/realdist[j][k]
+                '''第j个点对第k个点的作用，计算k会分别朝两个方向移动的距离：'''
+                grad[k][0]+=((loc[k][0]-loc[j][0])/fakedist[j][k])*errorterm
+                grad[k][1]+=((loc[k][1]-loc[j][1])/fakedist[j][k])*errorterm
+                totalerror+=abs(errorterm) 
+        '''在最里层累加计算，但在最外层m的循环中比较，也就是说每步迭代有一个totalerror'''
+        print(totalerror)
+        # 如果继续移动之后情况更坏了，说明已经完成
+        if lasterror and lasterror<totalerror: break
+        lasterror=totalerror #否则更新“上一步的总误差”
+        
+        '''移点，用减号是因为计算梯度的时候是用k为被减数'''
+        for k in range(n):#如果k比j大，那么grad为正，所以就用-=做减法
+            loc[k][0]-=rate*grad[k][0]
+            loc[k][1]-=rate*grad[k][1]
+    return loc
+
+def draw2d(data,labels,jpeg='mds2d.jpg'):
+    img=Image.new('RGB',(2000,2000),(255,255,255))
+    draw=ImageDraw.Draw(img)
+    for i in range(len(data)):
+        x=(data[i][0]+0.5)*1000
+        y=(data[i][1]+0.5)*1000
+        '''长宽都2000，那么左下和右上的坐标分别是(-1000,-1000)、(1000,1000)'''
+        draw.text((x,y),labels[i],(0,0,0)) #最后一个参数应该是颜色（黑）
+    img.save(jpeg,'JPEG')
+
+
+blognames,words,data=readfile('blogdata.txt')
+coords=scaledown(data)
+draw2d(coords,blognames,jpeg='blogs2d.jpg')
