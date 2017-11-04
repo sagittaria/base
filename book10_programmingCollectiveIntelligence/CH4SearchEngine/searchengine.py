@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# 选用人民网英文版为靶
+# 选用archlinux的wiki为靶
 
 import time
 import requests
 import sqlite3
+import re
 from bs4 import BeautifulSoup
 
 # words to ignore
@@ -28,15 +29,33 @@ class crawler:
     
     # Index an individual page
     def addtoindex(self,url,soup):
-        print('Indexing %s' % url)
-    
-    # Extract the text from an HTML page (no tags)
-    def gettextonly(self,soup):
-        return None
+        if self.isindexed(url): return
+        print('Indexing '+url)
         
-    # Separate the words by any non-whitespace character
+        text=self.gettextonly(soup) #拿到页面上的文本
+        words=self.separatewords(text) #分词结果
+        
+        urlid=self.getentryid('urllist','url',url) #获取id
+        
+        # 每个word，在那个url指向的文档中，出现的位置
+        for i in range(len(words)):
+            word=words[i]
+            if word in ignorewords: continue
+            wordid=self.getentryid('wordlist','word',word)
+            self.con.execute("insert into wordlocation(urlid,wordid,location) \
+            values (%d,%d,%d)" % (urlid,wordid,i))
+    
+    # 提取不带html标签的文本内容
+    def gettextonly(self,soup):
+        return soup.get_text()
+        
+    # 所有非字母、非数字的字符，都被当做分隔符，以此分词
     def separatewords(self,text):
-        return None
+        splitter=re.compile('\\W*') #大小的W表示的意思与小写的w相反
+        '''
+        \w等价于[a-zA-Z0-9_]，\W等价于[^a-zA-Z0-9_]，就是排除了\w的情况
+        '''
+        return [s.lower( ) for s in splitter.split(text) if s!='']
         
     # Return true if this url is already indexed
     def isindexed(self,url):
@@ -64,16 +83,19 @@ class crawler:
                 self.addtoindex(page,soup)
                 
                 links=soup.find_all('a') #提取所有a标签
-                
+
                 for link in links:
                     url = link.get('href')
                     if(url):
-                        if(url[0:20]=='http://en.people.cn/' and not self.isindexed(url)):
-                            newpages.add(url)
+                        if(url[0:4]=='http'):#如果是普通链接
+                            url = url # 不用动
                         elif(url[0:1]=='/'):
-                            url = 'http://en.people.cn' + url
-                            if(not self.isindexed(url)):
-                                newpages.add(url)
+                            url = 'https://wiki.archlinux.org' + url
+                        else:#忽略一些其他情况，如页内跳转的锚点(#)或javascript:;等
+                            continue
+                        
+                        if(not self.isindexed(url)):
+                            newpages.add(url)
                     # 以上提取页面上的所有本站内部链接
 
                     linkText=self.gettextonly(link)
@@ -83,24 +105,30 @@ class crawler:
             
             pages=newpages
     
-    # Create the database tables
+    # Create the database tables，在sqlite里建的每个表都自带rowid，不用再额外加id
+    # 可以 select rowid,* from urllist 来试看。另外，如不指定的话，字段的数据类型默认为object
     def createindextables(self):
-        self.con.execute('create table urllist(url)')
-        self.con.execute('create table wordlist(word)')
-        self.con.execute('create table wordlocation(urlid,wordid,location)')
-        self.con.execute('create table link(fromid integer,toid integer)')
-        self.con.execute('create table linkwords(wordid,linkid)')
-        self.con.execute('create index wordidx on wordlist(word)')
-        self.con.execute('create index urlidx on urllist(url)')
-        self.con.execute('create index wordurlidx on wordlocation(wordid)')
-        self.con.execute('create index urltoidx on link(toid)')
-        self.con.execute('create index urlfromidx on link(fromid)')
+        self.con.execute('create table if not exists urllist(url)') #存已经过索引的URL
+        self.con.execute('create table if not exists wordlist(word)') #出现过的单词
+        self.con.execute('create table if not exists wordlocation(urlid,wordid,location)')
+        #上表用list存单词在文档中所处的位置↑，下表用两个rowid存与其相应的两个url之间的跳转关系↓
+        self.con.execute('create table if not exists link(fromid integer,toid integer)')
+        #下表存某个word用在某个link指向的文档中的记录
+        self.con.execute('create table if not exists linkwords(wordid,linkid)')
+        #再下是给所有表创建索引
+        self.con.execute('create index if not exists wordidx on wordlist(word)')
+        self.con.execute('create index if not exists urlidx on urllist(url)')
+        self.con.execute('create index if not exists wordurlidx on wordlocation(wordid)')
+        self.con.execute('create index if not exists urltoidx on link(toid)')
+        self.con.execute('create index if not exists urlfromidx on link(fromid)')
         self.dbcommit( )
 
 
-#pagelist=['http://en.people.cn/n3/2017/1218/c90000-9305342.html']
-#crawler=crawler('')
-#crawler.crawl(pagelist)
+pagelist=['https://wiki.archlinux.org/index.php/Installation_guide']
 crawler=crawler('test.db')
-crawler.createindextables()
-crawler.con.close()
+crawler.crawl(pagelist)
+del crawler
+
+#crawler=crawler('test.db')
+#crawler.createindextables()
+#del crawler
