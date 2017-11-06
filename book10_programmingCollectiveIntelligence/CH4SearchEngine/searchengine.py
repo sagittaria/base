@@ -19,7 +19,7 @@ class crawler:
     def __del__(self):
         print("Good bye, ")
         self.con.close()
-        print("the fantasy world")
+        print("remember me, a crawler.")
     
     def dbcommit(self):
         self.con.commit()
@@ -69,7 +69,7 @@ class crawler:
         
     # Return true if this url is already indexed
     def isindexed(self,url):
-        print("debug:"+url)
+#        print("debug:"+url)
         u=self.con.execute \
             ("select rowid from urllist where url=\"%s\"" % url).fetchone()
         if u!=None:
@@ -146,9 +146,57 @@ class crawler:
         self.dbcommit( )
 
 
-crawler=crawler('test.db')
-crawler.createindextables()
-pagelist=['https://wiki.archlinux.org/index.php/Installation_guide']
-crawler.crawl(pagelist)
+class searcher:
+    def __init__(self,dbname):
+        self.con=sqlite3.connect(dbname)
+        
+    def __del__(self):
+        print("Good bye, ")
+        self.con.close()
+        print("remember me, a searcher.")
+        
+    def getmatchrows(self,q):
+        # Strings to build the query
+        fieldlist='w0.urlid'
+        tablelist=''
+        clauselist=''
+        wordids=[]
+    
+        # Split the words by spaces
+        words=q.split(' ')
+        tablenumber=0
+        
+        for word in words:
+            # Get the word ID
+            wordrow=self.con.execute(
+                "select rowid from wordlist where word='%s'" % word).fetchone()
+            if wordrow!=None:
+                wordid=wordrow[0]
+                wordids.append(wordid)
+                if tablenumber>0:
+                    tablelist+=','
+                    clauselist+=' and '
+                    clauselist+='w%d.urlid=w%d.urlid and ' % (tablenumber-1,tablenumber)
+                fieldlist+=',w%d.location' % tablenumber
+                tablelist+='wordlocation w%d' % tablenumber
+                clauselist+='w%d.wordid=%d' % (tablenumber,wordid)
+                tablenumber+=1
+            
+        # Create the query from the separate parts
+        fullquery='select %s from %s where %s' % (fieldlist,tablelist,clauselist)
+        print(fullquery) #打印sql语句
+        cur=self.con.execute(fullquery)
+        rows=[row for row in cur]
+        #rows中元素的格式：(urlid,第1个词的位置，第2个词的位置,..., 第n个词的位置)
+        return rows,wordids
 
-#del crawler
+
+if __name__ == "__main__":
+#    crawler=crawler('test.db')
+#    crawler.createindextables()
+#    pagelist=['https://wiki.archlinux.org/index.php/Installation_guide']
+#    crawler.crawl(pagelist)
+#    del crawler
+    searcher = searcher("test.db")
+    searcher.getmatchrows("keyboard")
+    del searcher
