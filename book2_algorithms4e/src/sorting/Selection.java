@@ -12,7 +12,7 @@ public class Selection extends Sort {
                     min = j;
             }
             exch(a, i, min);
-            show(a);
+            // show(a);
         }
     }
 

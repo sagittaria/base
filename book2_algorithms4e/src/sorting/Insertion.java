@@ -9,7 +9,7 @@ public class Insertion extends Sort {
             for (int j = i; j > 0 && less(a[j], a[j - 1]); j--) {
                 // 因为j--之后可能为零，所以必须先判断(j>0)，否则可能越界（a[0-1]）
                 exch(a, j, j - 1);
-                show(a);
+                // show(a);
             }
         }
     }
