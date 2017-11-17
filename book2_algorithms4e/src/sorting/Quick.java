@@ -5,9 +5,13 @@ import edu.princeton.cs.algs4.StdRandom;
 public class Quick extends Sort {
     
     public static void main(String[] args) {
-        String[] a = {"Q","U","I","C","K","S","O","R","T","E","X","A","M","P","L","E"};
+//        String[] a = {"Q","U","I","C","K","S","O","R","T","E","X","A","M","P","L","E"};
+        //String[] a = {"Q","U","I","C","K"};
+        Double[] a = {3.,5.,4.,7.,1.,6.,8.,2.,9.};
         show(a);
+        System.out.println("-------");
         sort(a);
+        System.out.println("finally");
         show(a);
     }
     
@@ -42,6 +46,8 @@ public class Quick extends Sort {
             exch(a, i, j);
         }
         exch(a, lo, j);
+        System.out.println("out:(lo,j): "+lo+","+j);
+        show(a);
         return j;
     }
 
