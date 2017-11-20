@@ -7,5 +7,6 @@ public class DailySigning {
         System.out.println("2018-01-02 01:05 Sec.2.1.5 reached! P159");
         System.out.println("2018-01-06 16:31 Sec.2.2.4 reached! P177");
         System.out.println("2018-01-11 20:27 Sec.2.3.2 reached! P185");
+        System.out.println("2018-01-13 14:00 Sec.2.4 reached! P195");
     }
 }

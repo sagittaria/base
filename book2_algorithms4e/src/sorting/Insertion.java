@@ -13,11 +13,21 @@ public class Insertion extends Sort {
             }
         }
     }
+    
+    public static void sort(Comparable[] a, int lo, int hi) {
+        for (int i = lo+1; i <= hi; i++) {
+            for (int j = i; j > lo && less(a[j], a[j - 1]); j--) {
+                exch(a, j, j - 1);
+                // show(a);
+            }
+        }
+    }
 
     public static void main(String[] args) {
-        String[] a = In.readStrings();
-        sort(a);
-        assert isSorted(a);
+        //String[] a = In.readStrings();
+        String[] a = {"Q","U","I","C","K","S","O","R","T","E","X","A","M","P","L","E"};
+        sort(a,1,a.length-2);
+        //assert isSorted(a);
         System.out.println("finally: ");
         show(a);
     }
