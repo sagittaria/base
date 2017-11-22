@@ -6,6 +6,7 @@ public class Check {
         System.out.println("next: ch6, p109");
         System.out.println("next: ch8, p148");
         System.out.println("next: ch9, p169");
+        System.out.println("next: sec9.5, p180");
     }
 
 }
