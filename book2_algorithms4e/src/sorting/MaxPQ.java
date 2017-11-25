@@ -19,15 +19,15 @@ public class MaxPQ<Key extends Comparable<Key>> {
     }
 
     public void insert(Key v) {
-        pq[++N] = v;
+        pq[++N] = v; // 省略了动态调整数组大小的代码
         swim(N);
     }
 
     public Key delMax() {
         Key max = pq[1];
-        exch(1, N--);
-        pq[N + 1] = null;
-        sink(1);
+        exch(1, N--); // 换完之后减小size
+        pq[N + 1] = null; // 并释放掉数组末端元素
+        sink(1); // 把换到顶上的元素沉至合适的位子
         return max;
     }
 
