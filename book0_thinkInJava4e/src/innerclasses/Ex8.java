@@ -1,10 +1,10 @@
 package innerclasses;
 
-public class Ex10 {
+public class Ex8 {
 
     public static void main(String[] args) {
-        Ex10 e = new Ex10();
-        Ex10.InnerClass ic = e.new InnerClass();
+        Ex8 e = new Ex8();
+        Ex8.InnerClass ic = e.new InnerClass();
         System.out.println(ic.i);// 外部类可以通过内部类实例访问内部类的私有成员
 
         Normal nm = new Normal();
