@@ -1,10 +1,5 @@
 package searching;
 
-import static org.junit.Assert.*;
-
-import org.junit.Before;
-import org.junit.Test;
-
 import fundamentals.Queue;
 
 public class BinarySearchST<Key extends Comparable<Key>, Value> {
@@ -40,8 +35,8 @@ public class BinarySearchST<Key extends Comparable<Key>, Value> {
     public int rank(Key key) {
         int lo = 0;
         int hi = N - 1;
-        int mid = lo + (hi - lo) / 2;
         while (lo <= hi) {
+            int mid = lo + (hi - lo) / 2;
             int cmp = key.compareTo(keys[mid]);
             if (cmp > 0)
                 lo = mid + 1;
@@ -92,6 +87,16 @@ public class BinarySearchST<Key extends Comparable<Key>, Value> {
 
     public void delete(Key key) {
 
+    }
+    
+    public static void main(String[] args){
+        BinarySearchST<String, String> testST;
+        testST=new BinarySearchST<String, String>(10);
+        testST.put("key1", "val1");
+        testST.put("key2", "val2");
+        testST.put("key3", "val3");
+        testST.put("key4", "val4");
+        testST.put("key5", "val5");
     }
 
 }
